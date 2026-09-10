@@ -29,6 +29,7 @@ def populate_seed_data():
     HasVoted.objects.all().delete()
     User.objects.all().delete()
     Election.objects.all().delete()
+    AuditLog.objects.all().delete()
     print("[+] Cleared all previous user logins, credentials, sessions, and ballots.")
 
     # 2. Initialize Genesis Audit Block

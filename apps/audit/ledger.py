@@ -1,12 +1,23 @@
 import json
 import logging
-from django.db import transaction
+from django.db import transaction, connection
 from django.utils import timezone
 from .models import AuditLog
 
 logger = logging.getLogger(__name__)
 
 GENESIS_HASH = "0" * 64
+
+def sync_audit_sequence():
+    """Synchronize the PostgreSQL sequence for AuditLog with max(id) to avoid duplicate key errors."""
+    try:
+        if connection.vendor == 'postgresql':
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT setval(pg_get_serial_sequence('audit_auditlog', 'id'), coalesce(max(id), 1), max(id) IS NOT NULL) FROM audit_auditlog;"
+                )
+    except Exception as e:
+        logger.warning(f"Could not sync PostgreSQL audit sequence: {e}")
 
 def get_client_ip(request):
     """Extract real client IP address from request."""
@@ -19,22 +30,23 @@ def get_client_ip(request):
 
 def ensure_genesis_block():
     """Ensure the immutable genesis block exists at Block #1."""
-    if not AuditLog.objects.exists():
+    genesis = AuditLog.objects.order_by('id').first()
+    if not genesis:
         entry = AuditLog(
-            id=1,
             timestamp=timezone.now(),
             event_type=AuditLog.EVENT_SYSTEM_INIT,
             user_id=None,
             matric_no="SYSTEM",
             ip_address="127.0.0.1",
-            details=json.dumps({"info": "Apex University E-Voting Genesis Block Initialized"}),
+            details=json.dumps({"info": "ATBU E-Voting Genesis Block Initialized"}),
             prev_hash=GENESIS_HASH,
         )
         entry.current_hash = entry.compute_hash(GENESIS_HASH)
         entry.save()
+        sync_audit_sequence()
         logger.info(f"Genesis Block initialized with hash: {entry.current_hash}")
         return entry
-    return AuditLog.objects.order_by('id').first()
+    return genesis
 
 @transaction.atomic
 def log_audit_event(event_type, request=None, user=None, matric_no=None, details=None):

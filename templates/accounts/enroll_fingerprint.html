@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Device Fingerprint | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="glass-card p-4 p-md-5 text-center">
+      <div class="mb-4">
+        <h4 class="fw-bold text-dark mb-1">Register Your Device Fingerprint</h4>
+        <p class="text-muted small">
+          Use your device's built-in fingerprint sensor to register for biometric verification.
+          Your fingerprint data never leaves your device.
+        </p>
+        <span class="badge bg-light text-dark border">{{ target_user.matric_no }} - {{ target_user.get_full_name }}</span>
+      </div>
+
+      <!-- Fingerprint Visual -->
+      <div class="my-4">
+        <div class="biometric-scanner-container" id="biometric-scanner" title="Tap to register fingerprint" style="cursor: pointer;">
+          <div class="scan-laser" id="scan-laser" style="display: none;"></div>
+          <svg class="fingerprint-svg" viewBox="0 0 24 24">
+            <path d="M12 1a11 11 0 0 0-11 11v1a1 1 0 0 0 2 0v-1a9 9 0 0 1 18 0v1a1 1 0 0 0 2 0v-1a11 11 0 0 0-11-11zm0 4a7 7 0 0 0-7 7v4a1 1 0 0 0 2 0v-4a5 5 0 0 1 10 0v4a1 1 0 0 0 2 0v-4a7 7 0 0 0-7-7zm0 4a3 3 0 0 0-3 3v7a1 1 0 0 0 2 0v-7a1 1 0 0 1 2 0v7a1 1 0 0 0 2 0v-7a3 3 0 0 0-3-3zm-4 12a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm8 0a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1z"/>
+          </svg>
+        </div>
+
+        <div id="webauthn-status" class="status-badge text-primary fw-semibold mt-3 d-inline-block small">
+          Tap the button below to register your fingerprint.
+        </div>
+      </div>
+
+      <!-- Enrolled Devices List -->
+      {% if credentials %}
+        <div class="p-3 rounded bg-light border mb-4 text-start">
+          <h6 class="text-dark fw-bold small mb-2">Registered Devices</h6>
+          {% for cred in credentials %}
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+              <span class="small text-dark">
+                <i class="bi bi-phone me-1"></i> {{ cred.device_name }}
+              </span>
+              <span class="badge bg-success small">Active</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Register Button -->
+      <button type="button" class="btn btn-emerald px-4 py-2 shadow-sm w-100 mb-2" id="btn-enroll-device">
+        <i class="bi bi-fingerprint me-1"></i>
+        {% if credentials %}
+          Register Another Device
+        {% else %}
+          Register Device Fingerprint
+        {% endif %}
+      </button>
+
+      <!-- Passkey / Biometric Guidance Note -->
+      <div class="alert alert-light border small text-muted text-start mt-2 mb-3">
+        <div class="d-flex align-items-start">
+          <i class="bi bi-info-circle text-primary me-2 mt-1 fs-6"></i>
+          <div>
+            <strong class="text-dark">Browser Prompt:</strong> Modern browsers (Chrome, Edge, Safari) use the term <strong class="text-dark">"Passkey"</strong> for device biometrics. When the dialog says <em>"Create a passkey to sign in to localhost"</em>, click <strong class="text-dark">Continue</strong>, then touch your physical <strong>fingerprint sensor</strong> (or Windows Hello / device sensor) to register.
+          </div>
+        </div>
+      </div>
+
+      <!-- Browser Support Warning -->
+      <div id="webauthn-unsupported" class="alert alert-warning small d-none">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Your browser or device does not support fingerprint authentication.
+        Please use a modern browser on a device with a fingerprint sensor.
+      </div>
+
+      <!-- Skip / Continue Link -->
+      <div class="mt-3">
+        {% if credentials %}
+          <a href="{% url 'accounts:login_step1' %}" class="btn btn-outline-secondary w-100">
+            Continue to Login
+          </a>
+        {% else %}
+          <a href="{% url 'accounts:login_step1' %}" class="text-muted small text-decoration-none">
+            Skip for now (you can enroll later during login)
+          </a>
+        {% endif %}
+      </div>
+
+      <div class="mt-4 pt-3 border-top small text-muted">
+        FIDO2 / WebAuthn device fingerprint. Your biometric data is processed entirely on your device and never transmitted.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/webauthn_client.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const client = new WebAuthnClient();
+
+  // Check browser support
+  const supported = WebAuthnClient.isSupported();
+  const platformAvailable = supported ? await WebAuthnClient.isPlatformAuthenticatorAvailable() : false;
+
+  if (!supported || !platformAvailable) {
+    const unsupportedEl = document.getElementById('webauthn-unsupported');
+    if (unsupportedEl) unsupportedEl.classList.remove('d-none');
+  }
+
+  const enrollBtn = document.getElementById('btn-enroll-device');
+  if (enrollBtn) {
+    enrollBtn.addEventListener('click', async () => {
+      enrollBtn.disabled = true;
+      enrollBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Scanning fingerprint...';
+      const scanLaser = document.getElementById('scan-laser');
+      if (scanLaser) scanLaser.style.display = 'block';
+
+      const result = await client.registerDevice('Personal Device');
+
+      if (result.success) {
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        enrollBtn.disabled = false;
+        enrollBtn.innerHTML = '<i class="bi bi-fingerprint me-1"></i> Register Device Fingerprint';
+        if (scanLaser) scanLaser.style.display = 'none';
+      }
+    });
+  }
+
+  // Also allow clicking the scanner visual
+  const scanner = document.getElementById('biometric-scanner');
+  if (scanner) {
+    scanner.addEventListener('click', () => {
+      if (enrollBtn && !enrollBtn.disabled) enrollBtn.click();
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: atbu-evoting
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python seed_data.py && python manage.py collectstatic --noinput
+    startCommand: gunicorn election_system.wsgi:application
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: WEBAUTHN_RP_NAME
+        value: "ATBU E-Voting"

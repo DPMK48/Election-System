@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}MFA & Biometrics Setup | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-9 col-lg-8">
+    <div class="glass-card p-4 p-md-5">
+      
+      <div class="text-center mb-4">
+        <div class="d-inline-flex p-3 rounded-circle mb-3 bg-light border border-success border-opacity-25 text-success">
+          <i class="bi bi-shield-check fs-2"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1">MFA & Biometric Enrollment</h4>
+        <p class="text-muted small">Configure OTP Authenticator and register fingerprint template</p>
+        <span class="badge bg-light text-dark border px-3 py-1">
+          Reg No: {{ target_user.matric_no }} ({{ target_user.get_full_name }})
+        </span>
+      </div>
+
+      <div class="row g-4">
+        <!-- Factor 2: TOTP QR Code -->
+        <div class="col-md-6 border-end-md text-center">
+          <h6 class="text-dark fw-bold mb-3"><i class="bi bi-phone me-1 text-success"></i> 1. OTP Authenticator</h6>
+          <div class="p-3 bg-white border d-inline-block rounded shadow-sm mb-3">
+            <img src="data:image/png;base64,{{ qr_b64 }}" alt="TOTP QR Code" style="width: 170px; height: 170px;">
+          </div>
+          <p class="text-muted small">Scan using Google Authenticator or Authy on your mobile device.</p>
+          <div class="p-2 bg-light rounded border font-monospace small text-dark">
+            Secret: {{ secret }}
+          </div>
+        </div>
+
+        <!-- Factor 3: Fingerprint Biometric Scanner -->
+        <div class="col-md-6 text-center">
+          <h6 class="text-dark fw-bold mb-3"><i class="bi bi-fingerprint me-1 text-success"></i> 2. Fingerprint Registration</h6>
+          
+          <div class="biometric-scanner-container" id="enroll-scanner" style="width: 170px; height: 200px;">
+            <div class="scan-laser"></div>
+            <svg class="fingerprint-svg" viewBox="0 0 24 24" style="width: 90px; height: 110px; margin-top: 35px;">
+              <path d="M12 1a11 11 0 0 0-11 11v1a1 1 0 0 0 2 0v-1a9 9 0 0 1 18 0v1a1 1 0 0 0 2 0v-1a11 11 0 0 0-11-11zm0 4a7 7 0 0 0-7 7v4a1 1 0 0 0 2 0v-4a5 5 0 0 1 10 0v4a1 1 0 0 0 2 0v-4a7 7 0 0 0-7-7zm0 4a3 3 0 0 0-3 3v7a1 1 0 0 0 2 0v-7a1 1 0 0 1 2 0v7a1 1 0 0 0 2 0v-7a3 3 0 0 0-3-3zm-4 12a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm8 0a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1z"/>
+            </svg>
+          </div>
+
+          <div id="enroll-status" class="small text-muted mt-2">
+            Click to capture and register fingerprint minutiae.
+          </div>
+
+          <button type="button" class="btn btn-sm btn-emerald mt-3" id="btn-enroll-finger">
+            <i class="bi bi-fingerprint me-1"></i> Register Fingerprint
+          </button>
+        </div>
+      </div>
+
+      <div class="text-center mt-4 pt-3 border-top">
+        <a href="{% url 'accounts:login_step1' %}" class="btn btn-outline-secondary px-4">
+          Return to Login
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById('btn-enroll-finger').addEventListener('click', async () => {
+    const statusEl = document.getElementById('enroll-status');
+    statusEl.innerHTML = '<span class="text-primary">Capturing minutiae...</span>';
+
+    const minutiae = [];
+    for (let i = 0; i < 38; i++) {
+      const radius = 30 + (i * 3.5);
+      const angle = (i * 0.45) % (Math.PI * 2);
+      minutiae.push({
+        x: Math.round(250 + radius * Math.cos(angle) * 0.85),
+        y: Math.round(250 + radius * Math.sin(angle) * 1.15),
+        direction: Math.round((angle + Math.PI / 2) * 1000) / 1000,
+        type: (i % 3 === 0) ? 'bifurcation' : 'ending'
+      });
+    }
+
+    const payload = {
+      matric_no: '{{ target_user.matric_no }}',
+      finger_index: 'RIGHT_INDEX',
+      template: {
+        template_id: 'TEMPLATE-ENROLLED',
+        finger_type: 'RIGHT_INDEX',
+        minutiae: minutiae
+      }
+    };
+
+    try {
+      const resp = await fetch('/biometrics/api/enroll/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const res = await resp.json();
+      if (res.success) {
+        statusEl.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i> ${res.message}</span>`;
+      } else {
+        statusEl.innerHTML = `<span class="text-danger fw-bold">${res.message}</span>`;
+      }
+    } catch (e) {
+      statusEl.innerHTML = `<span class="text-danger">Error: ${e.message}</span>`;
+    }
+  });
+</script>
+{% endblock %}

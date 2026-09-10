@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Ballot Receipt | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-9 col-lg-8">
+    <div class="glass-card p-4 p-md-5">
+      
+      <div class="text-center mb-4">
+        <div class="d-inline-flex p-3 rounded-circle mb-3 bg-light border text-primary">
+          <i class="bi bi-search fs-2"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1">Verify Ballot Receipt</h4>
+        <p class="text-muted small">Verify that your vote is safely recorded in the audit ledger</p>
+      </div>
+
+      <!-- Search Input Form -->
+      <form method="GET" class="mb-4">
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-qr-code"></i></span>
+          <input type="text" name="token" class="form-control" placeholder="Enter Token e.g. VOTE-91B8-E54E-71D1" value="{{ token }}" required>
+          <button class="btn btn-emerald px-4" type="submit">
+            Verify
+          </button>
+        </div>
+      </form>
+
+      <!-- Verification Results -->
+      {% if token %}
+        {% if found %}
+          <div class="p-4 rounded bg-light border border-success mb-4">
+            <div class="d-flex align-items-center gap-2 text-success fw-bold fs-6 mb-2">
+              <i class="bi bi-patch-check-fill fs-5"></i> Valid Ballot Record Confirmed
+            </div>
+            <p class="text-secondary small mb-3">
+              This receipt token exists in the official audit ledger. The ballot was counted in the election tally.
+            </p>
+
+            <h6 class="text-dark small text-uppercase fw-bold mb-2">Chained Block Records:</h6>
+            {% for b in ballot_records %}
+              <div class="p-2 mb-2 rounded bg-white border font-monospace small" style="font-size: 0.78rem;">
+                <div class="d-flex justify-content-between text-muted">
+                  <span><strong>{{ b.election_title }}</strong> &rarr; {{ b.position_title }}</span>
+                  <span>{{ b.timestamp }}</span>
+                </div>
+                <div class="text-dark mt-1 text-truncate">Hash: {{ b.ballot_hash }}</div>
+                <div class="text-muted text-truncate">Prev: {{ b.prev_ballot_hash }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-4 rounded bg-light border border-danger text-center">
+            <i class="bi bi-exclamation-circle fs-2 text-danger d-block mb-2"></i>
+            <h6 class="text-danger fw-bold mb-1">Receipt Token Not Found</h6>
+            <p class="text-muted small mb-0">No recorded ballot matches the token "{{ token }}". Please check your receipt.</p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <div class="p-3 rounded bg-light border small text-muted">
+        <h6 class="text-dark fw-bold small"><i class="bi bi-info-circle text-primary me-1"></i> How Verification Works:</h6>
+        <p class="mb-0">
+          The public ledger confirms that your ballot was received and cryptographically sealed. Candidate selections are kept confidential so nobody can see who you voted for.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

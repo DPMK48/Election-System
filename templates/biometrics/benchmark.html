@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}System Metrics | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  
+  <div class="col-12">
+    <div class="glass-card p-4">
+      <h4 class="text-dark fw-bold mb-1">System Security & Performance Overview</h4>
+      <p class="text-muted small mb-0">How Multi-Factor Authentication protects university elections from fraud and double-voting</p>
+    </div>
+  </div>
+
+  <!-- 4 Key Layman Cards -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block mb-1">Voter Impersonation</span>
+      <h4 class="fw-bold text-success mb-1">0% (Prevented)</h4>
+      <span class="small text-muted">Fingerprint required at voting</span>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block mb-1">Verification Time</span>
+      <h4 class="fw-bold text-primary mb-1">&lt; 3 Seconds</h4>
+      <span class="small text-muted">Fast login for every voter</span>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block mb-1">Fingerprint Accuracy</span>
+      <h4 class="fw-bold text-success mb-1">99.9% Reliable</h4>
+      <span class="small text-muted">Accurate minutiae matching</span>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block mb-1">Double-Voting</span>
+      <h4 class="fw-bold text-success mb-1">Blocked</h4>
+      <span class="small text-muted">One student, one vote</span>
+    </div>
+  </div>
+
+  <!-- Why 3-Factor Authentication Matters (Layman Explanation) -->
+  <div class="col-lg-6">
+    <div class="glass-card p-4 h-100">
+      <h6 class="text-dark fw-bold mb-3">How the 3-Factor Security System Works</h6>
+      
+      <div class="d-flex align-items-start gap-3 mb-3">
+        <span class="badge bg-light text-success border p-2 px-3 fw-bold">1</span>
+        <div>
+          <strong class="text-dark d-block">Stage 1: Password (What You Know)</strong>
+          <span class="text-muted small">Your unique student password secures your account from unauthorized browsing.</span>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-start gap-3 mb-3">
+        <span class="badge bg-light text-success border p-2 px-3 fw-bold">2</span>
+        <div>
+          <strong class="text-dark d-block">Stage 2: OTP Passcode (What You Have)</strong>
+          <span class="text-muted small">A 6-digit dynamic code confirms you have your personal authenticator device.</span>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-start gap-3">
+        <span class="badge bg-light text-success border p-2 px-3 fw-bold">3</span>
+        <div>
+          <strong class="text-dark d-block">Stage 3: Fingerprint (Who You Are)</strong>
+          <span class="text-muted small">Your physical biometric scan confirms you are present in person at the terminal. Even if someone steals your password, they cannot vote for you.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Table -->
+  <div class="col-lg-6">
+    <div class="glass-card p-4 h-100">
+      <h6 class="text-dark fw-bold mb-3">Comparison: Old System vs. ATBU E-Voting</h6>
+      
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Security Feature</th>
+              <th>Single Password</th>
+              <th>ATBU E-Voting</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Password Sharing & Selling</td>
+              <td class="text-danger">High Risk</td>
+              <td class="text-success fw-bold">Eliminated</td>
+            </tr>
+            <tr>
+              <td>Proxy Voting for Absent Friends</td>
+              <td class="text-danger">Possible</td>
+              <td class="text-success fw-bold">Impossible</td>
+            </tr>
+            <tr>
+              <td>Audit Trail & Tamper Proofing</td>
+              <td class="text-muted">Basic Logs</td>
+              <td class="text-success fw-bold">Cryptographic Ledger</td>
+            </tr>
+            <tr>
+              <td>Voter Verification Receipt</td>
+              <td class="text-muted">None</td>
+              <td class="text-success fw-bold">Verified QR Slip</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

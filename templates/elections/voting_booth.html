@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ election.title }} | Voting Booth{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  
+  <!-- Election Header Banner -->
+  <div class="col-12">
+    <div class="glass-card p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-success">Official Voting Booth</span>
+          <span class="badge bg-light text-dark border">{{ election.get_category_display }}</span>
+        </div>
+        <h4 class="text-dark fw-bold mb-0">{{ election.title }}</h4>
+
+      </div>
+
+      <div class="text-md-end">
+        <span class="badge bg-light text-dark border px-3 py-2">
+          <i class="bi bi-person me-1 text-success"></i> Voter: {{ user.matric_no }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voting Form -->
+  <div class="col-lg-8">
+    <form id="ballotForm">
+      {% csrf_token %}
+
+      {% for position in positions %}
+        <div class="glass-card p-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <div>
+              <h5 class="text-dark fw-bold mb-0">
+                {{ position.title }}
+              </h5>
+              <span class="text-muted small">Select maximum {{ position.max_choices }} candidate</span>
+            </div>
+            <span class="badge bg-light text-dark border">Position #{{ forloop.counter }}</span>
+          </div>
+
+          <div class="row g-3">
+            {% for candidate in position.candidates.all %}
+              <div class="col-md-6">
+                <div class="candidate-card h-100 d-flex flex-column justify-content-between" 
+                     id="card-cand-{{ candidate.id }}" 
+                     onclick="selectCandidate({{ position.id }}, {{ candidate.id }}, '{{ candidate.full_name|escapejs }}', '{{ position.title|escapejs }}')">
+                  
+                  <div class="d-flex align-items-start gap-3 mb-2">
+                    <div class="avatar-initials" style="width: 46px; height: 46px; font-size: 1.15rem;">
+                      {{ candidate.full_name|slice:":1"|upper }}
+                    </div>
+                    <div>
+                      <h6 class="text-dark fw-bold mb-0">{{ candidate.full_name }}</h6>
+                      {% if candidate.nickname %}
+                        <span class="text-muted small">"{{ candidate.nickname }}"</span>
+                      {% endif %}
+                      <div class="small text-muted">{{ candidate.matric_no|default:"Candidate" }}</div>
+                    </div>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#manifestoModal{{ candidate.id }}"
+                            onclick="event.stopPropagation();">
+                      View Manifesto
+                    </button>
+                    
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="pos_{{ position.id }}" id="cand_{{ candidate.id }}" value="{{ candidate.id }}" style="pointer-events: none;">
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Manifesto Modal -->
+              <div class="modal fade" id="manifestoModal{{ candidate.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content border">
+                    <div class="modal-header">
+                      <h6 class="modal-title fw-bold">{{ candidate.full_name }} - Manifesto</h6>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="avatar-initials" style="width: 50px; height: 50px; font-size: 1.25rem;">
+                          {{ candidate.full_name|slice:":1"|upper }}
+                        </div>
+                        <div>
+                          <h6 class="fw-bold mb-0 text-dark">{{ candidate.full_name }}</h6>
+                          <span class="text-success small">{{ position.title }}</span>
+                        </div>
+                      </div>
+                      <p class="text-secondary">{{ candidate.manifesto }}</p>
+                    </div>
+
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            {% empty %}
+              <div class="col-12 text-muted small">No approved candidates for this position.</div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+
+    </form>
+  </div>
+
+  <!-- Summary Panel -->
+  <div class="col-lg-4">
+    <div class="glass-card p-4 sticky-top" style="top: 85px;">
+      <h5 class="text-dark fw-bold mb-3 pb-2 border-bottom">
+        Ballot Summary
+      </h5>
+
+      <p class="text-muted small">Review your choices before submitting. Your vote is confidential and recorded once.</p>
+
+      <div id="ballotReviewList" class="mb-4">
+        {% for position in positions %}
+          <div class="p-2 mb-2 rounded bg-light border small" id="review-pos-{{ position.id }}">
+            <div class="text-muted">{{ position.title }}:</div>
+            <div class="fw-bold text-secondary" id="review-cand-{{ position.id }}">Not selected</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <button type="button" class="btn btn-emerald w-100 py-2 shadow-sm fw-bold" id="btn-submit-ballot" onclick="submitBallot()">
+        Cast Ballot
+      </button>
+
+      <div class="mt-3 text-center text-muted small" style="font-size: 0.75rem;">
+        Once submitted, your vote is recorded permanently in the system.
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const selectedVotes = {};
+
+  function selectCandidate(posId, candId, candName, posTitle) {
+    selectedVotes[posId] = candId;
+
+    const radio = document.getElementById(`cand_${candId}`);
+    if (radio) radio.checked = true;
+
+    document.querySelectorAll(`[id^="card-cand-"]`).forEach(el => {
+      if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(`selectCandidate(${posId},`)) {
+        el.classList.remove('selected');
+      }
+    });
+
+    const card = document.getElementById(`card-cand-${candId}`);
+    if (card) card.classList.add('selected');
+
+    const revEl = document.getElementById(`review-cand-${posId}`);
+    if (revEl) {
+      revEl.textContent = candName;
+      revEl.className = 'fw-bold text-success';
+    }
+  }
+
+  async function submitBallot() {
+    const keys = Object.keys(selectedVotes);
+    if (keys.length === 0) {
+      alert('Please select at least one candidate before submitting your ballot.');
+      return;
+    }
+
+    if (!confirm('Confirm that you want to submit your vote?')) {
+      return;
+    }
+
+    const btn = document.getElementById('btn-submit-ballot');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting ballot...';
+
+    try {
+      const response = await fetch('/elections/api/cast-ballot/{{ election.id }}/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ votes: selectedVotes })
+      });
+
+      const res = await response.json();
+
+      if (response.ok && res.success) {
+        window.location.href = res.redirect_url;
+      } else {
+        alert(res.message || 'Ballot submission failed.');
+        btn.disabled = false;
+        btn.innerHTML = 'Cast Ballot';
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = 'Cast Ballot';
+    }
+  }
+</script>
+{% endblock %}

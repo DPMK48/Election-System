@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Access Denied | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="glass-card p-4 p-md-5 text-center border-danger border-opacity-25">
+      
+      <div class="d-inline-flex p-3 rounded-circle mb-3 bg-light border border-danger border-opacity-25 text-danger">
+        <i class="bi bi-shield-x fs-1"></i>
+      </div>
+      
+      <h4 class="fw-bold text-dark mb-2">Access Denied</h4>
+      <p class="text-danger fw-semibold mb-3">{{ reason }}</p>
+      
+      <div class="p-3 rounded bg-light border text-start small text-muted mb-4">
+        <div class="fw-bold text-dark mb-1">Security Policy Notice:</div>
+        <ul class="mb-0 ps-3">
+          <li>Authentication stages must be completed sequentially (Password, then OTP, then Fingerprint).</li>
+          <li>Each registered student is permitted to cast only one ballot per election.</li>
+          <li>Unauthorized access attempts are logged for administrative audit.</li>
+        </ul>
+      </div>
+
+      <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+        <a href="{% url 'accounts:login_step1' %}" class="btn btn-emerald px-4">
+          <i class="bi bi-arrow-clockwise me-1"></i> Return to Login
+        </a>
+        <a href="{% url 'elections:public_results' %}" class="btn btn-outline-secondary px-3">
+          <i class="bi bi-bar-chart me-1"></i> View Live Results
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

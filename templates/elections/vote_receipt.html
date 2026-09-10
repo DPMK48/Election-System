@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Voting Receipt | {{ receipt_token }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-9 col-lg-7">
+    
+    <!-- Printable Slip Card -->
+    <div class="glass-card p-4 p-md-5 printable-slip">
+      
+      <!-- Slip Header -->
+      <div class="text-center pb-3 mb-4 border-bottom">
+        <div class="d-inline-flex p-3 rounded-circle mb-2 bg-light border border-success text-success">
+          <i class="bi bi-patch-check fs-2"></i>
+        </div>
+        <h5 class="text-dark fw-bold mb-0">ABUBAKAR TAFAWA BALEWA UNIVERSITY</h5>
+        <span class="text-muted small text-uppercase">University Electoral Committee (UNECO) - Official Voting Slip</span>
+      </div>
+
+      <!-- Election & Receipt Details -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6">
+          <span class="text-muted small d-block">Election:</span>
+          <span class="fw-bold text-dark">{{ election.title }}</span>
+        </div>
+        <div class="col-sm-6 text-sm-end">
+          <span class="text-muted small d-block">Timestamp:</span>
+          <span class="text-dark">{{ has_voted.timestamp|date:"M d, Y H:i:s" }}</span>
+        </div>
+
+        <div class="col-12 mt-3">
+          <div class="p-3 rounded bg-light border border-success text-center">
+            <span class="text-muted small d-block mb-1">Receipt Verification Token:</span>
+            <h4 class="fw-bold font-monospace text-success mb-0">{{ receipt_token }}</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code & Public Verification Instructions -->
+      <div class="row align-items-center g-3 p-3 rounded bg-light border mb-4">
+        <div class="col-auto mx-auto mx-sm-0">
+          <img src="data:image/png;base64,{{ qr_b64 }}" alt="Verification QR" class="rounded p-1 bg-white border" style="width: 100px; height: 100px;">
+        </div>
+        <div class="col text-start">
+          <h6 class="text-dark fw-bold mb-1"><i class="bi bi-shield-check text-success me-1"></i> Ballot Verified & Sealed</h6>
+          <p class="text-muted small mb-1">
+            Your voter identity has been safely decoupled from your choices. Use this token or scan the QR code to verify on the public audit ledger.
+          </p>
+          <a href="{% url 'elections:verify_receipt' %}?token={{ receipt_token }}" class="small text-primary text-decoration-none">
+            Verify on Public Audit Ledger &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- Cast Blocks Overview -->
+      <div class="mb-4">
+        <h6 class="text-dark fw-bold mb-2 small text-uppercase">Chained Ballot Records</h6>
+        {% for b in ballots %}
+          <div class="p-2 mb-2 rounded bg-light border font-monospace small" style="font-size: 0.75rem;">
+            <div class="d-flex justify-content-between text-muted">
+              <span>Position: <strong class="text-dark">{{ b.position.title }}</strong></span>
+              <span>Block #{{ b.id }}</span>
+            </div>
+            <div class="text-truncate text-secondary mt-1">Hash: {{ b.ballot_hash }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="d-flex justify-content-between align-items-center pt-3 border-top no-print">
+        <a href="{% url 'elections:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i> Dashboard
+        </a>
+        <button type="button" class="btn btn-emerald btn-sm px-4" onclick="window.print();">
+          <i class="bi bi-printer me-1"></i> Print Voting Slip
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Audit Ledger Explorer | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  
+  <!-- Explorer Header -->
+  <div class="col-12">
+    <div class="glass-card p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <h4 class="text-dark fw-bold mb-1">Audit Ledger Explorer</h4>
+        <p class="text-muted small mb-0">Cryptographically chained event blocks for complete election transparency</p>
+      </div>
+
+      <button type="button" class="btn btn-emerald" id="btn-verify-chain" onclick="runChainVerification()">
+        <i class="bi bi-shield-check me-1"></i> Verify Ledger Integrity
+      </button>
+    </div>
+  </div>
+
+  <!-- Chain Health Status Banner -->
+  <div class="col-12" id="chain-health-box">
+    {% if chain_health.is_valid %}
+      <div class="p-3 rounded bg-light border border-success d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2 text-success fw-bold">
+          <i class="bi bi-check-circle-fill fs-5"></i>
+          <div>
+            <div>Ledger Integrity 100% Intact & Verified</div>
+            <div class="text-muted small fw-normal">Total Chained Blocks: <strong>{{ chain_health.total_blocks }}</strong> | Zero discontinuities.</div>
+          </div>
+        </div>
+        <span class="badge bg-white text-dark border font-monospace text-truncate d-none d-lg-inline-block" style="max-width: 280px;">
+          Head: {{ chain_health.latest_hash }}
+        </span>
+      </div>
+    {% else %}
+      <div class="p-3 rounded bg-light border border-danger text-danger">
+        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+        <strong>Ledger Anomaly:</strong> {{ chain_health.error_message }}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Filter & Block Stream -->
+  <div class="col-12">
+    <div class="glass-card p-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <h6 class="text-dark fw-bold mb-0">Audit Block Stream</h6>
+        
+        <!-- Filter Form -->
+        <form method="GET" class="d-flex gap-2">
+          <select name="event_type" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">-- All Event Types --</option>
+            {% for val, label in event_choices %}
+              <option value="{{ val }}" {% if event_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+
+      <!-- Blocks Stream List -->
+      {% for entry in page_obj %}
+        <div class="block-card mb-3 {% if entry.is_tampered %}border-danger{% endif %}">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2 pb-1 border-bottom">
+            <div>
+              <span class="badge bg-light text-dark border me-2">Block #{{ entry.id }}</span>
+              <span class="badge bg-light text-dark border">{{ entry.get_event_type_display }}</span>
+              <span class="text-muted small ms-2">{{ entry.timestamp|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            <div class="small text-muted">
+              Actor: <strong class="text-dark">{{ entry.matric_no|default:"SYSTEM" }}</strong>
+            </div>
+          </div>
+
+          <div class="row g-2 small">
+            <div class="col-md-6">
+              <div class="text-muted">Prev: <span class="hash-pill">{{ entry.prev_hash }}</span></div>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <div class="text-muted">Hash: <span class="hash-pill">{{ entry.current_hash }}</span></div>
+            </div>
+            {% if entry.details %}
+              <div class="col-12 mt-1">
+                <div class="p-2 rounded bg-white border text-secondary text-break font-monospace" style="font-size: 0.75rem;">
+                  Payload: {{ entry.details }}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <div class="text-center py-5 text-muted">No audit blocks match the filter.</div>
+      {% endfor %}
+
+      <!-- Pagination -->
+      {% if page_obj.has_other_pages %}
+        <nav class="mt-4">
+          <ul class="pagination pagination-sm justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&event_type={{ event_filter }}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&event_type={{ event_filter }}">Next</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function runChainVerification() {
+    const btn = document.getElementById('btn-verify-chain');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Verifying hashes...';
+
+    try {
+      const resp = await fetch('/audit/api/verify-chain/');
+      const data = await resp.json();
+      
+      const box = document.getElementById('chain-health-box');
+      if (data.is_valid) {
+        box.innerHTML = `
+          <div class="p-3 rounded bg-light border border-success d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2 text-success fw-bold">
+              <i class="bi bi-check-circle-fill fs-5"></i>
+              <div>
+                <div>Cryptographic Verification Success: 100% Valid Chain!</div>
+                <div class="text-muted small fw-normal">Validated ${data.total_blocks} sequential blocks from Genesis. Zero anomalies found.</div>
+              </div>
+            </div>
+            <span class="badge bg-white text-dark border font-monospace text-truncate d-none d-lg-inline-block" style="max-width: 280px;">
+              Head: ${data.latest_hash}
+            </span>
+          </div>
+        `;
+      } else {
+        box.innerHTML = `
+          <div class="p-3 rounded bg-light border border-danger text-danger">
+            <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+            <strong>Ledger Anomaly Detected:</strong> ${data.error_message}
+          </div>
+        `;
+      }
+    } catch (e) {
+      alert('Verification request failed: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-shield-check me-1"></i> Verify Ledger Integrity';
+    }
+  }
+</script>
+{% endblock %}

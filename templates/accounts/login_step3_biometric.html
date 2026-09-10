@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Step 3: Fingerprint Verification | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+
+    <!-- MFA Step Indicator -->
+    <div class="mfa-stepper">
+      <div class="mfa-step completed"><i class="bi bi-check"></i></div>
+      <div class="mfa-step completed"><i class="bi bi-check"></i></div>
+      <div class="mfa-step active">3</div>
+    </div>
+    <div class="d-flex justify-content-between text-muted small px-2 mb-4">
+      <span class="text-success">1. Password Verified</span>
+      <span class="text-success">2. OTP Verified</span>
+      <span class="text-success fw-bold">3. Fingerprint</span>
+    </div>
+
+    <!-- Fingerprint Verification Card -->
+    <div class="glass-card p-4 p-md-5 text-center">
+      <div class="mb-3">
+        <h4 class="fw-bold text-dark mb-1">Fingerprint Verification</h4>
+        <p class="text-muted small">Use your device's fingerprint sensor to verify your identity</p>
+        <div class="d-inline-flex gap-2">
+          <span class="badge bg-light text-dark border">Reg No: {{ user_obj.matric_no }}</span>
+          {% if has_credential %}
+            <span class="badge bg-success text-white">Device Registered</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">No Device Registered</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Fingerprint Scanner Visual -->
+      <div class="my-4">
+        <div class="biometric-scanner-container" id="biometric-scanner" title="Touch to scan fingerprint">
+          <div class="scan-laser" id="scan-laser" style="display: none;"></div>
+          
+          <!-- Fingerprint SVG Icon -->
+          <svg class="fingerprint-svg" viewBox="0 0 24 24">
+            <path d="M12 1a11 11 0 0 0-11 11v1a1 1 0 0 0 2 0v-1a9 9 0 0 1 18 0v1a1 1 0 0 0 2 0v-1a11 11 0 0 0-11-11zm0 4a7 7 0 0 0-7 7v4a1 1 0 0 0 2 0v-4a5 5 0 0 1 10 0v4a1 1 0 0 0 2 0v-4a7 7 0 0 0-7-7zm0 4a3 3 0 0 0-3 3v7a1 1 0 0 0 2 0v-7a1 1 0 0 1 2 0v7a1 1 0 0 0 2 0v-7a3 3 0 0 0-3-3zm-4 12a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm8 0a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1z"/>
+          </svg>
+        </div>
+
+        <div id="webauthn-status" class="status-badge text-primary fw-semibold mt-3 d-inline-block small">
+          {% if has_credential %}
+            Ready. Tap the button below to scan your fingerprint.
+          {% else %}
+            You need to register your device first before you can verify.
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Verification Progress Bar -->
+      <div class="p-3 rounded bg-light border mb-4 text-start">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-muted">Verification Status:</span>
+          <span class="small fw-bold text-dark font-monospace" id="biometric-score-text">Waiting for fingerprint scan</span>
+        </div>
+        <div class="progress" style="height: 8px;">
+          <div class="progress-bar bg-success" id="biometric-score-bar" role="progressbar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      {% if has_credential %}
+        <!-- User has a registered device — show Verify button -->
+        <div class="d-flex flex-column gap-2">
+          <button type="button" class="btn btn-emerald px-4 py-2 shadow-sm" id="btn-webauthn-verify">
+            <i class="bi bi-fingerprint me-1"></i> Verify with Fingerprint
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-webauthn-enroll-another">
+            Register Another Device
+          </button>
+        </div>
+      {% else %}
+        <!-- No registered device — show Enroll button -->
+        <div class="d-flex flex-column gap-2">
+          <button type="button" class="btn btn-emerald px-4 py-2 shadow-sm" id="btn-webauthn-enroll">
+            <i class="bi bi-fingerprint me-1"></i> Register Device Fingerprint
+          </button>
+          <p class="text-muted small mt-2 mb-0">
+            This will use your device's built-in fingerprint sensor. Your fingerprint data never leaves your device.
+          </p>
+        </div>
+      {% endif %}
+
+      <!-- Passkey / Biometric Guidance Note -->
+      <div class="alert alert-light border small text-muted text-start mt-3 mb-0">
+        <div class="d-flex align-items-start">
+          <i class="bi bi-info-circle text-primary me-2 mt-1 fs-6"></i>
+          <div>
+            <strong class="text-dark">Browser Prompt:</strong> Modern browsers show a dialog saying <em>"Sign in with a passkey"</em> or <em>"Windows Hello"</em>. Click <strong class="text-dark">Continue</strong>, then touch your physical <strong>fingerprint sensor</strong> (or Windows Hello / device biometric) to complete authentication.
+          </div>
+        </div>
+      </div>
+
+      <!-- Browser Support Warning (hidden by default, shown via JS if unsupported) -->
+      <div id="webauthn-unsupported" class="alert alert-warning mt-3 small d-none">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Your browser or device does not support fingerprint authentication.
+        Please use a modern browser on a device with a fingerprint sensor.
+      </div>
+
+      <div class="mt-4 pt-3 border-top small text-muted">
+        FIDO2 / WebAuthn device fingerprint verification. Your biometric data never leaves your device.
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/webauthn_client.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const client = new WebAuthnClient();
+
+  // Check browser support
+  const supported = WebAuthnClient.isSupported();
+  const platformAvailable = supported ? await WebAuthnClient.isPlatformAuthenticatorAvailable() : false;
+
+  if (!supported || !platformAvailable) {
+    const unsupportedEl = document.getElementById('webauthn-unsupported');
+    if (unsupportedEl) unsupportedEl.classList.remove('d-none');
+  }
+
+  // Verify button (for users with registered devices)
+  const verifyBtn = document.getElementById('btn-webauthn-verify');
+  if (verifyBtn) {
+    verifyBtn.addEventListener('click', async () => {
+      verifyBtn.disabled = true;
+      verifyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Scanning...';
+      const scanLaser = document.getElementById('scan-laser');
+      if (scanLaser) scanLaser.style.display = 'block';
+
+      await client.authenticate();
+
+      verifyBtn.disabled = false;
+      verifyBtn.innerHTML = '<i class="bi bi-fingerprint me-1"></i> Verify with Fingerprint';
+      if (scanLaser) scanLaser.style.display = 'none';
+    });
+  }
+
+  // Enroll button (for users without registered devices)
+  const enrollBtn = document.getElementById('btn-webauthn-enroll');
+  if (enrollBtn) {
+    enrollBtn.addEventListener('click', async () => {
+      enrollBtn.disabled = true;
+      enrollBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enrolling...';
+
+      const result = await client.registerDevice('Personal Device');
+
+      if (result.success) {
+        // After successful enrollment, reload so the verify button appears
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        enrollBtn.disabled = false;
+        enrollBtn.innerHTML = '<i class="bi bi-fingerprint me-1"></i> Register Device Fingerprint';
+      }
+    });
+  }
+
+  // Enroll another device button
+  const enrollAnotherBtn = document.getElementById('btn-webauthn-enroll-another');
+  if (enrollAnotherBtn) {
+    enrollAnotherBtn.addEventListener('click', async () => {
+      enrollAnotherBtn.disabled = true;
+      const result = await client.registerDevice('Additional Device');
+      if (result.success) {
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        enrollAnotherBtn.disabled = false;
+      }
+    });
+  }
+
+  // Also allow clicking the scanner visual
+  const scanner = document.getElementById('biometric-scanner');
+  if (scanner) {
+    scanner.addEventListener('click', () => {
+      if (verifyBtn && !verifyBtn.disabled) {
+        verifyBtn.click();
+      } else if (enrollBtn && !enrollBtn.disabled) {
+        enrollBtn.click();
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

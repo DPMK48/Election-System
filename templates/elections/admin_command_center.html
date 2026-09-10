@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}UNECO Command Center | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  
+  <!-- Admin Header -->
+  <div class="col-12">
+    <div class="glass-card p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <h4 class="text-dark fw-bold mb-1">Electoral Commission Control Center</h4>
+        <p class="text-muted small mb-0">Election management, voter rosters, and security monitoring</p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="{% url 'elections:create_election' %}" class="btn btn-emerald btn-sm">
+          <i class="bi bi-plus-circle me-1"></i> Create Election
+        </a>
+        <a href="{% url 'elections:voter_roster' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-people me-1"></i> Voter Roll
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics Row -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block">Registered Voters</span>
+      <h3 class="fw-bold text-dark mb-0">{{ total_voters }}</h3>
+      <span class="small text-success">{{ verified_voters }} Verified</span>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block">Biometrics Enrolled</span>
+      <h3 class="fw-bold text-primary mb-0">{{ biometric_enrolled }}</h3>
+      <span class="small text-muted">Encrypted Templates</span>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block">Total Ballots Cast</span>
+      <h3 class="fw-bold text-success mb-0">{{ total_ballots_cast }}</h3>
+      <span class="small text-muted">Audit-Chained</span>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="glass-card p-3 text-center">
+      <span class="text-muted small d-block">Security Alerts</span>
+      <h3 class="fw-bold {% if security_alerts %}text-danger{% else %}text-success{% endif %} mb-0">{{ security_alerts|length }}</h3>
+      <span class="small text-muted">Active Guard</span>
+    </div>
+  </div>
+
+  <!-- Managed Elections Table -->
+  <div class="col-lg-8">
+    <div class="glass-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="text-dark fw-bold mb-0">Elections</h6>
+        <a href="{% url 'elections:create_election' %}" class="btn btn-sm btn-outline-success">
+          New Election
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr class="text-muted small text-uppercase">
+              <th>Title</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Votes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for el in elections %}
+              <tr>
+                <td>
+                  <div class="fw-bold text-dark">{{ el.title }}</div>
+                  <div class="text-muted small">{{ el.start_time|date:"M d, H:i" }} - {{ el.end_time|date:"M d, H:i" }}</div>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark border">{{ el.get_category_display }}</span>
+                </td>
+                <td>
+                  <span class="badge {% if el.status == 'ACTIVE' %}bg-success{% elif el.status == 'DRAFT' %}bg-secondary{% elif el.status == 'PAUSED' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
+                    {{ el.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-success border font-monospace">{{ el.total_ballots_cast }}</span>
+                </td>
+                <td>
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Manage
+                    </button>
+                    <ul class="dropdown-menu border shadow-sm">
+                      <li><a class="dropdown-item" href="{% url 'elections:candidate_manager' el.id %}">Screen Candidates</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      {% if el.status != 'ACTIVE' %}
+                        <li><a class="dropdown-item text-success" href="{% url 'elections:manage_election_status' el.id 'ACTIVE' %}">Open Voting</a></li>
+                      {% endif %}
+                      {% if el.status == 'ACTIVE' %}
+                        <li><a class="dropdown-item text-warning" href="{% url 'elections:manage_election_status' el.id 'PAUSED' %}">Pause Voting</a></li>
+                      {% endif %}
+                      {% if el.status != 'CONCLUDED' %}
+                        <li><a class="dropdown-item text-danger" href="{% url 'elections:manage_election_status' el.id 'CONCLUDED' %}">Conclude Election</a></li>
+                      {% endif %}
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-4">No elections configured yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Anomaly Feed -->
+  <div class="col-lg-4">
+    <div class="glass-card p-4 h-100">
+      <h6 class="text-dark fw-bold mb-3">Security Activity Log</h6>
+      
+      {% for alert in security_alerts %}
+        <div class="p-2 mb-2 rounded bg-light border border-danger border-opacity-25 small">
+          <div class="d-flex justify-content-between text-danger fw-bold">
+            <span>{{ alert.get_event_type_display }}</span>
+            <span class="font-monospace" style="font-size: 0.7rem;">{{ alert.timestamp|date:"H:i:s" }}</span>
+          </div>
+          <div class="text-secondary mt-1">Reg No: <strong>{{ alert.matric_no|default:"Anonymous" }}</strong></div>
+        </div>
+      {% empty %}
+        <div class="text-center py-4 text-muted small">
+          <i class="bi bi-shield-check fs-2 text-success d-block mb-1"></i>
+          Zero security violations detected.
+        </div>
+      {% endfor %}
+
+      <div class="mt-4 pt-3 border-top text-center">
+        <a href="{% url 'audit:ledger_explorer' %}" class="btn btn-sm btn-outline-primary w-100">
+          Open Full Audit Ledger
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Election Results | ATBU E-Voting{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  
+  <!-- Results Banner -->
+  <div class="col-12">
+    <div class="glass-card p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <h4 class="text-dark fw-bold mb-1">Live Election Results</h4>
+        <p class="text-muted small mb-0">Official live tally and candidate distribution</p>
+      </div>
+
+      <!-- Election Switcher Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+          <i class="bi bi-box-seam me-1 text-success"></i> 
+          {% if selected_election %}{{ selected_election.title }}{% else %}Select Election{% endif %}
+        </button>
+        <ul class="dropdown-menu border shadow-sm">
+          {% for el in elections %}
+            <li>
+              <a class="dropdown-item {% if selected_election.id == el.id %}active{% endif %}" href="{% url 'elections:public_results_election' el.id %}">
+                {{ el.title }} [{{ el.get_status_display }}]
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {% if selected_election %}
+    <!-- Telemetry Stats Cards -->
+    <div class="col-md-4">
+      <div class="glass-card p-3 text-center">
+        <span class="text-muted small d-block mb-1">Total Ballots Cast</span>
+        <h3 class="fw-bold text-success mb-0">{{ total_votes }}</h3>
+        <span class="text-muted small">Verified Ballots</span>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="glass-card p-3 text-center">
+        <span class="text-muted small d-block mb-1">Election Status</span>
+        <h3 class="fw-bold text-dark mb-0">
+          {{ selected_election.get_status_display }}
+        </h3>
+        <span class="text-muted small">Closes: {{ selected_election.end_time|date:"M d, H:i" }}</span>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="glass-card p-3 text-center">
+        <span class="text-muted small d-block mb-1">Positions</span>
+        <h3 class="fw-bold text-primary mb-0">{{ results_data|length }}</h3>
+        <span class="text-muted small">Contested Offices</span>
+      </div>
+    </div>
+
+    <!-- Position Breakdown & Charts -->
+    {% for pos in results_data %}
+      <div class="col-lg-6">
+        <div class="glass-card p-4 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <h6 class="text-dark fw-bold mb-0">
+              {{ pos.position.title }}
+            </h6>
+            <span class="badge bg-light text-dark border">{{ pos.total_votes }} votes</span>
+          </div>
+
+          <!-- Candidate List -->
+          <div class="mb-4">
+            {% for cand in pos.candidates %}
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="avatar-initials" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                      {{ cand.candidate.full_name|slice:":1"|upper }}
+                    </div>
+                    <span class="fw-bold text-dark small">{{ cand.candidate.full_name }}</span>
+
+                    {% if forloop.first and cand.votes > 0 %}
+                      <span class="badge bg-success small" style="font-size: 0.65rem;">Leading</span>
+                    {% endif %}
+                  </div>
+                  <span class="font-monospace small text-success fw-bold">{{ cand.votes }} ({{ cand.percentage }}%)</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar {% if forloop.first %}bg-success{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ cand.percentage }}%;"></div>
+                </div>
+              </div>
+            {% empty %}
+              <div class="text-muted small">No votes recorded yet for this position.</div>
+            {% endfor %}
+          </div>
+
+          <!-- Position Mini Donut Chart Canvas -->
+          <div style="height: 180px; position: relative;">
+            <canvas id="chart-pos-{{ pos.position.id }}"></canvas>
+          </div>
+
+        </div>
+      </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="col-12 text-center py-5 text-muted">
+      <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
+      No active elections found to display.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    {% if results_data %}
+      {% for pos in results_data %}
+        const ctx{{ pos.position.id }} = document.getElementById('chart-pos-{{ pos.position.id }}');
+        if (ctx{{ pos.position.id }}) {
+          new Chart(ctx{{ pos.position.id }}, {
+            type: 'doughnut',
+            data: {
+              labels: [{% for c in pos.candidates %}'{{ c.candidate.full_name|escapejs }}',{% endfor %}],
+              datasets: [{
+                data: [{% for c in pos.candidates %}{{ c.votes }},{% endfor %}],
+                backgroundColor: ['#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2'],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: { color: '#475569', font: { size: 11 } }
+                }
+              }
+            }
+          });
+        }
+      {% endfor %}
+    {% endif %}
+  });
+</script>
+{% endblock %}
